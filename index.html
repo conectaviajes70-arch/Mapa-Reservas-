@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Conecta Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      font-family: Arial, sans-serif;
+    }
+
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+
+    /* Input estilo Conecta */
+    .search-box {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 85%;
+      max-width: 400px;
+      z-index: 10;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      outline: none;
+      background: #111;
+      color: #fff;
+      font-size: 14px;
+      box-shadow: 0 0 10px rgba(0, 200, 255, 0.3);
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="search-box">
+  <input id="autocomplete" placeholder="¿A dónde vas?" type="text">
+</div>
+
+<div id="map"></div>
+
+<script>
+let map;
+let marker;
+let autocomplete;
+
+function initMap() {
+
+  const ubicacionInicial = { lat: 19.4326, lng: -99.1332 }; // CDMX
+
+  map = new google.maps.Map(document.getElementById("map"), {
+    center: ubicacionInicial,
+    zoom: 14,
+    styles: [
+      { elementType: "geometry", stylers: [{ color: "#0b0b0b" }] },
+      { elementType: "labels.text.stroke", stylers: [{ color: "#0b0b0b" }] },
+      { elementType: "labels.text.fill", stylers: [{ color: "#8ec3ff" }] },
+      {
+        featureType: "road",
+        elementType: "geometry",
+        stylers: [{ color: "#1a1a1a" }]
+      },
+      {
+        featureType: "water",
+        elementType: "geometry",
+        stylers: [{ color: "#001f3f" }]
+      },
+      {
+        featureType: "poi",
+        elementType: "geometry",
+        stylers: [{ color: "#121212" }]
+      }
+    ]
+  });
+
+  marker = new google.maps.Marker({
+    map: map,
+    draggable: true,
+    position: ubicacionInicial
+  });
+
+  // AUTOCOMPLETADO
+  const input = document.getElementById("autocomplete");
+  autocomplete = new google.maps.places.Autocomplete(input);
+
+  autocomplete.bindTo("bounds", map);
+
+  autocomplete.addListener("place_changed", () => {
+    const place = autocomplete.getPlace();
+
+    if (!place.geometry) return;
+
+    map.setCenter(place.geometry.location);
+    map.setZoom(16);
+
+    marker.setPosition(place.geometry.location);
+
+    // Enviar datos a Jotform (IMPORTANTE)
+    window.parent.postMessage({
+      lat: place.geometry.location.lat(),
+      lng: place.geometry.location.lng(),
+      direccion: place.formatted_address
+    }, "*");
+  });
+}
+</script>
+
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=TU_API_KEY&libraries=places&callback=initMap">
+</script>
+
+</body>
+</html>
