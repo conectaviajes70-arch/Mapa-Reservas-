@@ -5,59 +5,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Conecta (viajaYa)</title>
 
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
 <link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.css" rel="stylesheet">
+
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
 <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.min.js"></script>
 
 <style>
-body {
-  margin:0;
-  font-family: Arial;
-  background:#0b0f1a;
-  color:white;
-}
-
-/* Pantallas */
+body { margin:0; font-family: Arial; background:#0b0f1a; color:white; }
 .screen { display:none; padding:20px;}
 .active { display:block; }
 
 button {
-  width:100%;
-  padding:15px;
-  margin:10px 0;
-  border:none;
-  border-radius:12px;
-  background:#00e5ff;
-  color:#000;
-  font-weight:bold;
+  width:100%; padding:15px; margin:10px 0;
+  border:none; border-radius:12px;
+  background:#00e5ff; color:#000; font-weight:bold;
 }
 
-input {
-  width:100%;
-  padding:12px;
-  margin:8px 0;
-  border-radius:10px;
-  border:none;
-  background:#1a1f2e;
-  color:#fff;
+input, select {
+  width:100%; padding:12px; margin:8px 0;
+  border-radius:10px; border:none;
+  background:#1a1f2e; color:#fff;
 }
 
-#map {
-  height:200px;
-  border-radius:12px;
-  margin-top:10px;
-}
+#map { height:220px; border-radius:12px; margin-top:10px; }
 
-.logo {
-  width:120px;
-  display:block;
-  margin:0 auto;
-}
+.logo { width:120px; display:block; margin:0 auto; }
 
 .result {
-  background:#121726;
-  padding:12px;
-  border-radius:10px;
-  margin-top:10px;
+  background:#121726; padding:12px;
+  border-radius:10px; margin-top:10px;
 }
 
 .price { color:#00e5ff; font-size:20px; }
@@ -66,13 +43,12 @@ input {
 
 <body>
 
-<!-- PANTALLA 1 -->
+<!-- HOME -->
 <div id="home" class="screen active">
 <img src="logo.png" class="logo">
 <h2>Bienvenido a Conecta</h2>
-
-<button onclick="goLogin()">Ya tengo cuenta</button>
-<button onclick="goRegister()">Crear cuenta</button>
+<button onclick="show('login')">Ya tengo cuenta</button>
+<button onclick="show('register')">Crear cuenta</button>
 </div>
 
 <!-- LOGIN -->
@@ -80,7 +56,7 @@ input {
 <h3>Ingresar</h3>
 <input id="clave" placeholder="Ingresa tu clave">
 <button onclick="login()">Entrar</button>
-<button onclick="back()">Regresar</button>
+<button onclick="show('home')">Regresar</button>
 </div>
 
 <!-- REGISTRO -->
@@ -88,9 +64,7 @@ input {
 <h3>Registro</h3>
 <input id="nombre" placeholder="Nombre">
 <input id="telefono" placeholder="+52 55...">
-
 <button onclick="enviarOTP()">Enviar OTP</button>
-
 <input id="otp" placeholder="Código OTP">
 <button onclick="validarOTP()">Validar</button>
 </div>
@@ -127,6 +101,7 @@ input {
 <button onclick="aceptar()">Aceptar</button>
 <button onclick="rechazar()">Rechazar</button>
 </div>
+
 <!-- CONFIRMACION -->
 <div id="confirm" class="screen">
 <h2>🚗 Has reservado con Conecta</h2>
@@ -147,7 +122,53 @@ let map = new mapboxgl.Map({
 let origenCoord, destinoCoord, paradaCoord;
 let markers = [];
 
-/* AUTOCOMPLETADO */
+/* NAVEGACION */
+function show(id){
+ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+}
+
+/* LOGIN */
+function login(){
+ let clave = document.getElementById('clave').value;
+ if(clave === "1234"){
+   show('reserva');
+ } else {
+   alert("Clave incorrecta");
+   show('register');
+ }
+}
+
+/* OTP */
+let intentosOTP=0, otpGenerado=null, otpTime=null;
+
+function enviarOTP(){
+ let tel = document.getElementById('telefono').value;
+ if(!tel.startsWith("+52")) return alert("Número inválido");
+
+ if(intentosOTP>=3) return alert("Límite alcanzado");
+
+ otpGenerado = Math.floor(1000+Math.random()*9000);
+ otpTime = Date.now();
+
+ alert("OTP: "+otpGenerado);
+}
+
+function validarOTP(){
+ let otp = document.getElementById('otp').value;
+
+ if(Date.now()-otpTime>300000) return alert("OTP expirado");
+
+ if(otp==otpGenerado){
+   guardarUsuario();
+   show('reserva');
+ } else {
+   intentosOTP++;
+   alert("OTP incorrecto");
+ }
+}
+
+/* AUTOCOMPLETE */
 function createGeocoder(id, placeholder, callback){
   const geocoder = new MapboxGeocoder({
     accessToken: mapboxgl.accessToken,
@@ -164,202 +185,84 @@ function createGeocoder(id, placeholder, callback){
   });
 }
 
-createGeocoder("origenBox","Origen", (res)=>{
-  origenCoord = res.center;
+createGeocoder("origenBox","Origen", res=>{
+  origenCoord=res.center;
   setMarker(origenCoord,0);
 });
 
-createGeocoder("destinoBox","Destino", (res)=>{
-  destinoCoord = res.center;
+createGeocoder("destinoBox","Destino", res=>{
+  destinoCoord=res.center;
   setMarker(destinoCoord,1);
 });
 
-createGeocoder("paradaBox","Parada (opcional)", (res)=>{
-  paradaCoord = res.center;
+createGeocoder("paradaBox","Parada (opcional)", res=>{
+  paradaCoord=res.center;
   setMarker(paradaCoord,2);
 });
 
-/* MARCADORES (solo 3) */
+/* MARCADORES */
 function setMarker(coord,index){
   if(markers[index]){
     markers[index].setLngLat(coord);
   } else {
-    markers[index] = new mapboxgl.Marker().setLngLat(coord).addTo(map);
+    markers[index]=new mapboxgl.Marker().setLngLat(coord).addTo(map);
   }
   map.flyTo({center:coord});
 }
 
-/* UBICACIÓN PRECISA */
+/* GPS */
 async function usarUbicacion(){
-  navigator.geolocation.getCurrentPosition(async pos=>{
-    origenCoord = [pos.coords.longitude, pos.coords.latitude];
+ navigator.geolocation.getCurrentPosition(async pos=>{
+   origenCoord=[pos.coords.longitude,pos.coords.latitude];
+   setMarker(origenCoord,0);
 
-    setMarker(origenCoord,0);
+   let res=await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${origenCoord[0]},${origenCoord[1]}.json?access_token=${mapboxgl.accessToken}`);
+   let data=await res.json();
 
-    /* Obtener dirección real */
-    let res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${origenCoord[0]},${origenCoord[1]}.json?access_token=${mapboxgl.accessToken}`);
-    let data = await res.json();
+   document.querySelector('#origenBox input').value=data.features[0].place_name;
 
-    let direccion = data.features[0].place_name;
-
-    document.querySelector('#origenBox input').value = direccion;
-
-  }, err=>{
-    alert("Activa tu GPS");
-  }, {enableHighAccuracy:true});
-}
-
-/* DISTANCIA REAL */
-function getDistance(c1, c2){
-  let R = 6371;
-  let dLat = (c2[1]-c1[1])*Math.PI/180;
-  let dLon = (c2[0]-c1[0])*Math.PI/180;
-  let a = Math.sin(dLat/2)**2 +
-    Math.cos(c1[1]*Math.PI/180)*Math.cos(c2[1]*Math.PI/180) *
-    Math.sin(dLon/2)**2;
-  return R * (2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-}
-
-/* TIEMPO + TARIFA */
-async function cotizar(){
-  if(!origenCoord || !destinoCoord){
-    alert("Completa origen y destino");
-    return;
-  }
-
-  let coords = `${origenCoord.join(',')};${destinoCoord.join(',')}`;
-  if(paradaCoord){
-    coords = `${origenCoord.join(',')};${paradaCoord.join(',')};${destinoCoord.join(',')}`;
-  }
-
-  let url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coords}?access_token=${mapboxgl.accessToken}`;
-  let res = await fetch(url);
-  let data = await res.json();
-
-  let route = data.routes[0];
-
-  let km = route.distance / 1000;
-  let min = route.duration / 60;
-
-  let precio = 20 + (km * 7) + (min * 1.5);
-
-  document.getElementById('km').innerText = km.toFixed(2);
-  document.getElementById('time').innerText = min.toFixed(0);
-  document.getElementById('price').innerText = Math.round(precio);
-}
-
-/* Navegación */
-function goLogin(){show('login')}
-function goRegister(){show('register')}
-function back(){show('home')}
-function show(id){
- document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
- document.getElementById(id).classList.add('active');
-}
-
-/* LOGIN */
-function login(){
- let clave = document.getElementById('clave').value;
-
- if(clave === "1234"){ // cambiar por backend
-   show('reserva');
- } else {
-   alert("Clave incorrecta");
-   show('register');
- }
-}
-
-/* REGISTRO */
-function enviarOTP(){
- let tel = document.getElementById('telefono').value;
-
- if(!tel.startsWith("+52")){
-   alert("Número inválido México");
-   return;
- }
-
- if(intentosOTP >= 3){
-   alert("Límite de intentos");
-   return;
- }
-
- otpGenerado = Math.floor(1000 + Math.random()*9000);
- otpTime = Date.now();
-
- alert("OTP: " + otpGenerado); // simulación
-}
-
-function validarOTP(){
- let otp = document.getElementById('otp').value;
-
- if(Date.now() - otpTime > 300000){
-   alert("OTP expirado");
-   return;
- }
-
- if(otp == otpGenerado){
-   guardarUsuario();
-   show('reserva');
- } else {
-   intentosOTP++;
-   alert("OTP incorrecto");
- }
-}
-
-/* MAPA */
-async function geocode(place){
- let res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${place}.json?access_token=${mapboxgl.accessToken}`);
- let data = await res.json();
- return data.features[0].center;
-}
-
-function addMarker(coord){
- new mapboxgl.Marker().setLngLat(coord).addTo(map);
-}
-
-async function usarUbicacion(){
- navigator.geolocation.getCurrentPosition(pos=>{
-   origenCoord = [pos.coords.longitude, pos.coords.latitude];
-   addMarker(origenCoord);
- });
-}
-
-/* COTIZACION */
-async function cotizar(){
- origenCoord = await geocode(document.getElementById('origen').value);
- destinoCoord = await geocode(document.getElementById('destino').value);
-
- addMarker(origenCoord);
- addMarker(destinoCoord);
-
- let distancia = getDistance(origenCoord, destinoCoord);
- let tiempo = distancia / 0.5;
-
- let precio = 20 + (distancia * 7) + (tiempo * 1.5);
-
- document.getElementById('km').innerText = distancia.toFixed(2);
- document.getElementById('time').innerText = tiempo.toFixed(0);
- document.getElementById('price').innerText = Math.round(precio);
-
- enviarReserva(distancia, tiempo, precio);
+ },()=>alert("Activa GPS"),{enableHighAccuracy:true});
 }
 
 /* DISTANCIA */
-function getDistance(c1, c2){
- let R = 6371;
- let dLat = (c2[1]-c1[1])*Math.PI/180;
- let dLon = (c2[0]-c1[0])*Math.PI/180;
- let a = Math.sin(dLat/2)*Math.sin(dLat/2) +
- Math.cos(c1[1]*Math.PI/180)*Math.cos(c2[1]*Math.PI/180) *
- Math.sin(dLon/2)*Math.sin(dLon/2);
- let c = 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
- return R*c;
+function getDistance(c1,c2){
+ let R=6371;
+ let dLat=(c2[1]-c1[1])*Math.PI/180;
+ let dLon=(c2[0]-c1[0])*Math.PI/180;
+ let a=Math.sin(dLat/2)**2+
+ Math.cos(c1[1]*Math.PI/180)*Math.cos(c2[1]*Math.PI/180)*
+ Math.sin(dLon/2)**2;
+ return R*(2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
+}
+
+/* COTIZAR */
+async function cotizar(){
+ if(!origenCoord||!destinoCoord) return alert("Completa datos");
+
+ let coords=`${origenCoord.join(',')};${destinoCoord.join(',')}`;
+ if(paradaCoord){
+   coords=`${origenCoord.join(',')};${paradaCoord.join(',')};${destinoCoord.join(',')}`;
+ }
+
+ let res=await fetch(`https://api.mapbox.com/directions/v5/mapbox/driving/${coords}?access_token=${mapboxgl.accessToken}`);
+ let data=await res.json();
+
+ let route=data.routes[0];
+
+ let km=route.distance/1000;
+ let min=route.duration/60;
+
+ let precio=20+(km*7)+(min*1.5);
+
+ document.getElementById('km').innerText=km.toFixed(2);
+ document.getElementById('time').innerText=min.toFixed(0);
+ document.getElementById('price').innerText=Math.round(precio);
+
+ enviarReserva(km,min,precio);
 }
 
 /* BOTONES */
-function aceptar(){
- show('confirm');
-}
+function aceptar(){ show('confirm'); }
 
 function rechazar(){
  document.querySelectorAll('input').forEach(i=>i.value="");
@@ -368,34 +271,26 @@ function rechazar(){
 }
 
 /* RESET */
-function reset(){
- location.reload();
-}
+function reset(){ location.reload(); }
 
-/* BACKEND GOOGLE SHEETS */
+/* BACKEND */
 function guardarUsuario(){
- fetch("TU_URL_APPS_SCRIPT", {
-   method:"POST",
-   body:JSON.stringify({
-     tipo:"registro",
-     nombre:document.getElementById('nombre').value,
-     telefono:document.getElementById('telefono').value
-   })
- });
+ fetch("TU_URL_APPS_SCRIPT",{method:"POST",body:JSON.stringify({
+   tipo:"registro",
+   nombre:document.getElementById('nombre').value,
+   telefono:document.getElementById('telefono').value
+ })});
 }
 
-function enviarReserva(distancia, tiempo, precio){
- fetch("TU_URL_APPS_SCRIPT", {
-   method:"POST",
-   body:JSON.stringify({
-     tipo:"reserva",
-     origen:document.getElementById('origen').value,
-     destino:document.getElementById('destino').value,
-     distancia:distancia,
-     tiempo:tiempo,
-     precio:precio
-   })
- });
+function enviarReserva(km,min,precio){
+ fetch("TU_URL_APPS_SCRIPT",{method:"POST",body:JSON.stringify({
+   tipo:"reserva",
+   origen:document.querySelector('#origenBox input').value,
+   destino:document.querySelector('#destinoBox input').value,
+   km:km,
+   tiempo:min,
+   precio:precio
+ })});
 }
 </script>
 
