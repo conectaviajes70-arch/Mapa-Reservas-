@@ -1,123 +1,296 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Conecta Map</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conecta (viajaYa)</title>
 
-  <style>
-    body {
-      margin: 0;
-      background: #000;
-      font-family: Arial, sans-serif;
-    }
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
 
-    #map {
-      height: 100vh;
-      width: 100%;
-    }
+<style>
+body {
+  margin:0;
+  font-family: Arial;
+  background:#0b0f1a;
+  color:white;
+}
 
-    /* Input estilo Conecta */
-    .search-box {
-      position: absolute;
-      top: 15px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 85%;
-      max-width: 400px;
-      z-index: 10;
-    }
+/* Pantallas */
+.screen { display:none; padding:20px;}
+.active { display:block; }
 
-    input {
-      width: 100%;
-      padding: 12px;
-      border-radius: 10px;
-      border: none;
-      outline: none;
-      background: #111;
-      color: #fff;
-      font-size: 14px;
-      box-shadow: 0 0 10px rgba(0, 200, 255, 0.3);
-    }
-  </style>
+button {
+  width:100%;
+  padding:15px;
+  margin:10px 0;
+  border:none;
+  border-radius:12px;
+  background:#00e5ff;
+  color:#000;
+  font-weight:bold;
+}
+
+input {
+  width:100%;
+  padding:12px;
+  margin:8px 0;
+  border-radius:10px;
+  border:none;
+  background:#1a1f2e;
+  color:#fff;
+}
+
+#map {
+  height:200px;
+  border-radius:12px;
+  margin-top:10px;
+}
+
+.logo {
+  width:120px;
+  display:block;
+  margin:0 auto;
+}
+
+.result {
+  background:#121726;
+  padding:12px;
+  border-radius:10px;
+  margin-top:10px;
+}
+
+.price { color:#00e5ff; font-size:20px; }
+</style>
 </head>
 
 <body>
 
-<div class="search-box">
-  <input id="autocomplete" placeholder="¿A dónde vas?" type="text">
+<!-- PANTALLA 1 -->
+<div id="home" class="screen active">
+<img src="logo.png" class="logo">
+<h2>Bienvenido a Conecta</h2>
+
+<button onclick="goLogin()">Ya tengo cuenta</button>
+<button onclick="goRegister()">Crear cuenta</button>
 </div>
+
+<!-- LOGIN -->
+<div id="login" class="screen">
+<h3>Ingresar</h3>
+<input id="clave" placeholder="Ingresa tu clave">
+<button onclick="login()">Entrar</button>
+<button onclick="back()">Regresar</button>
+</div>
+
+<!-- REGISTRO -->
+<div id="register" class="screen">
+<h3>Registro</h3>
+<input id="nombre" placeholder="Nombre">
+<input id="telefono" placeholder="+52 55...">
+
+<button onclick="enviarOTP()">Enviar OTP</button>
+
+<input id="otp" placeholder="Código OTP">
+<button onclick="validarOTP()">Validar</button>
+</div>
+
+<!-- RESERVA -->
+<div id="reserva" class="screen">
+<h3>Reservar viaje</h3>
+
+<input id="origen" placeholder="Origen">
+<button onclick="usarUbicacion()">Usar mi ubicación</button>
+
+<input id="destino" placeholder="Destino">
+
+<input id="parada" placeholder="Parada adicional (opcional)">
 
 <div id="map"></div>
 
+<button onclick="cotizar()">Cotizar viaje</button>
+
+<div class="result">
+<div>📏 Distancia: <span id="km">0</span> km</div>
+<div>⏱ Tiempo: <span id="time">0</span> min</div>
+<div class="price">💰 $<span id="price">0</span></div>
+</div>
+
+<button onclick="aceptar()">Aceptar</button>
+<button onclick="rechazar()">Rechazar</button>
+</div>
+
+<!-- CONFIRMACION -->
+<div id="confirm" class="screen">
+<h2>🚗 Has reservado con Conecta</h2>
+<p>En breve nos comunicaremos contigo</p>
+<button onclick="reset()">Nuevo viaje</button>
+</div>
+
 <script>
-let map;
-let marker;
-let autocomplete;
+mapboxgl.accessToken = 'TU_TOKEN_MAPBOX';
 
-function initMap() {
+let map = new mapboxgl.Map({
+  container:'map',
+  style:'mapbox://styles/mapbox/streets-v12',
+  center:[-99.1332,19.4326],
+  zoom:10
+});
 
-  const ubicacionInicial = { lat: 19.4326, lng: -99.1332 }; // CDMX
+let origenCoord, destinoCoord;
+let intentosOTP = 0;
+let otpGenerado = null;
+let otpTime = null;
 
-  map = new google.maps.Map(document.getElementById("map"), {
-    center: ubicacionInicial,
-    zoom: 14,
-    styles: [
-      { elementType: "geometry", stylers: [{ color: "#0b0b0b" }] },
-      { elementType: "labels.text.stroke", stylers: [{ color: "#0b0b0b" }] },
-      { elementType: "labels.text.fill", stylers: [{ color: "#8ec3ff" }] },
-      {
-        featureType: "road",
-        elementType: "geometry",
-        stylers: [{ color: "#1a1a1a" }]
-      },
-      {
-        featureType: "water",
-        elementType: "geometry",
-        stylers: [{ color: "#001f3f" }]
-      },
-      {
-        featureType: "poi",
-        elementType: "geometry",
-        stylers: [{ color: "#121212" }]
-      }
-    ]
-  });
-
-  marker = new google.maps.Marker({
-    map: map,
-    draggable: true,
-    position: ubicacionInicial
-  });
-
-  // AUTOCOMPLETADO
-  const input = document.getElementById("autocomplete");
-  autocomplete = new google.maps.places.Autocomplete(input);
-
-  autocomplete.bindTo("bounds", map);
-
-  autocomplete.addListener("place_changed", () => {
-    const place = autocomplete.getPlace();
-
-    if (!place.geometry) return;
-
-    map.setCenter(place.geometry.location);
-    map.setZoom(16);
-
-    marker.setPosition(place.geometry.location);
-
-    // Enviar datos a Jotform (IMPORTANTE)
-    window.parent.postMessage({
-      lat: place.geometry.location.lat(),
-      lng: place.geometry.location.lng(),
-      direccion: place.formatted_address
-    }, "*");
-  });
+/* Navegación */
+function goLogin(){show('login')}
+function goRegister(){show('register')}
+function back(){show('home')}
+function show(id){
+ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
 }
-</script>
 
-<script async
-  src="https://maps.googleapis.com/maps/api/js?key=TU_API_KEY&libraries=places&callback=initMap">
+/* LOGIN */
+function login(){
+ let clave = document.getElementById('clave').value;
+
+ if(clave === "1234"){ // cambiar por backend
+   show('reserva');
+ } else {
+   alert("Clave incorrecta");
+   show('register');
+ }
+}
+
+/* REGISTRO */
+function enviarOTP(){
+ let tel = document.getElementById('telefono').value;
+
+ if(!tel.startsWith("+52")){
+   alert("Número inválido México");
+   return;
+ }
+
+ if(intentosOTP >= 3){
+   alert("Límite de intentos");
+   return;
+ }
+
+ otpGenerado = Math.floor(1000 + Math.random()*9000);
+ otpTime = Date.now();
+
+ alert("OTP: " + otpGenerado); // simulación
+}
+
+function validarOTP(){
+ let otp = document.getElementById('otp').value;
+
+ if(Date.now() - otpTime > 300000){
+   alert("OTP expirado");
+   return;
+ }
+
+ if(otp == otpGenerado){
+   guardarUsuario();
+   show('reserva');
+ } else {
+   intentosOTP++;
+   alert("OTP incorrecto");
+ }
+}
+
+/* MAPA */
+async function geocode(place){
+ let res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${place}.json?access_token=${mapboxgl.accessToken}`);
+ let data = await res.json();
+ return data.features[0].center;
+}
+
+function addMarker(coord){
+ new mapboxgl.Marker().setLngLat(coord).addTo(map);
+}
+
+async function usarUbicacion(){
+ navigator.geolocation.getCurrentPosition(pos=>{
+   origenCoord = [pos.coords.longitude, pos.coords.latitude];
+   addMarker(origenCoord);
+ });
+}
+
+/* COTIZACION */
+async function cotizar(){
+ origenCoord = await geocode(document.getElementById('origen').value);
+ destinoCoord = await geocode(document.getElementById('destino').value);
+
+ addMarker(origenCoord);
+ addMarker(destinoCoord);
+
+ let distancia = getDistance(origenCoord, destinoCoord);
+ let tiempo = distancia / 0.5;
+
+ let precio = 20 + (distancia * 7) + (tiempo * 1.5);
+
+ document.getElementById('km').innerText = distancia.toFixed(2);
+ document.getElementById('time').innerText = tiempo.toFixed(0);
+ document.getElementById('price').innerText = Math.round(precio);
+
+ enviarReserva(distancia, tiempo, precio);
+}
+
+/* DISTANCIA */
+function getDistance(c1, c2){
+ let R = 6371;
+ let dLat = (c2[1]-c1[1])*Math.PI/180;
+ let dLon = (c2[0]-c1[0])*Math.PI/180;
+ let a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+ Math.cos(c1[1]*Math.PI/180)*Math.cos(c2[1]*Math.PI/180) *
+ Math.sin(dLon/2)*Math.sin(dLon/2);
+ let c = 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+ return R*c;
+}
+
+/* BOTONES */
+function aceptar(){
+ show('confirm');
+}
+
+function rechazar(){
+ document.querySelectorAll('input').forEach(i=>i.value="");
+ document.getElementById('km').innerText=0;
+ document.getElementById('price').innerText=0;
+}
+
+/* RESET */
+function reset(){
+ location.reload();
+}
+
+/* BACKEND GOOGLE SHEETS */
+function guardarUsuario(){
+ fetch("TU_URL_APPS_SCRIPT", {
+   method:"POST",
+   body:JSON.stringify({
+     tipo:"registro",
+     nombre:document.getElementById('nombre').value,
+     telefono:document.getElementById('telefono').value
+   })
+ });
+}
+
+function enviarReserva(distancia, tiempo, precio){
+ fetch("TU_URL_APPS_SCRIPT", {
+   method:"POST",
+   body:JSON.stringify({
+     tipo:"reserva",
+     origen:document.getElementById('origen').value,
+     destino:document.getElementById('destino').value,
+     distancia:distancia,
+     tiempo:tiempo,
+     precio:precio
+   })
+ });
+}
 </script>
 
 </body>
