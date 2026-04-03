@@ -252,11 +252,40 @@ async function cotizar(){
  let km=route.distance/1000;
  let min=route.duration/60;
 
- let precio=20+(km*7)+(min*1.5);
+ // ===== TARIFA INTELIGENTE =====
+let velocidad = km / (min / 60);
+
+function factorHora(){
+ let h = new Date().getHours();
+ if(h>=7 && h<=10) return 1.3;
+ if(h>=18 && h<=22) return 1.4;
+ if(h>=23 || h<=5) return 1.2;
+ return 1;
+}
+
+function factorTrafico(v){
+ if(v < 20) return 1.4;
+ if(v < 35) return 1.2;
+ return 1;
+}
+
+function factorReserva(){
+ let tipo = document.getElementById("fechaTipo").value;
+ if(tipo==="mañana") return 1.1;
+ if(tipo==="otro") return 1.15;
+ return 1;
+}
+
+let precioBase = 20 + (km * 7) + (min * 1.5);
+
+let precioFinal = precioBase 
+  * factorHora() 
+  * factorTrafico(velocidad) 
+  * factorReserva();
 
  document.getElementById('km').innerText=km.toFixed(2);
  document.getElementById('time').innerText=min.toFixed(0);
- document.getElementById('price').innerText=Math.round(precio);
+document.getElementById('price').innerText=Math.round(precioFinal); 
 
  enviarReserva(km,min,precio);
 }
