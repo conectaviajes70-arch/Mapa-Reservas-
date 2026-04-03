@@ -99,12 +99,20 @@ input {
 <div id="reserva" class="screen">
 <h3>Reservar viaje</h3>
 
-<input id="origen" placeholder="Origen">
-<button onclick="usarUbicacion()">Usar mi ubicación</button>
+<div id="origenBox"></div>
+<button onclick="usarUbicacion()">📍 Usar mi ubicación</button>
 
-<input id="destino" placeholder="Destino">
+<div id="destinoBox"></div>
+<div id="paradaBox"></div>
 
-<input id="parada" placeholder="Parada adicional (opcional)">
+<select id="fechaTipo">
+  <option value="ahora">Lo más pronto (1-2 hrs)</option>
+  <option value="hoy">Hoy</option>
+  <option value="mañana">Mañana</option>
+  <option value="otro">Otra fecha</option>
+</select>
+
+<input type="datetime-local" id="fechaHora">
 
 <div id="map"></div>
 
@@ -119,7 +127,6 @@ input {
 <button onclick="aceptar()">Aceptar</button>
 <button onclick="rechazar()">Rechazar</button>
 </div>
-
 <!-- CONFIRMACION -->
 <div id="confirm" class="screen">
 <h2>🚗 Has reservado con Conecta</h2>
