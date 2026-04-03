@@ -283,6 +283,10 @@ let precioFinal = precioBase
   * factorTrafico(velocidad) 
   * factorReserva();
 
+// 🔥 CONTROL DE TARIFA
+precioFinal = Math.min(precioFinal, 800); // máximo
+precioFinal = Math.max(precioFinal, 60);  // mínimo
+
  document.getElementById('km').innerText=km.toFixed(2);
  document.getElementById('time').innerText=min.toFixed(0);
 document.getElementById('price').innerText=Math.round(precioFinal); 
