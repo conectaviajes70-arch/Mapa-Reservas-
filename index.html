@@ -133,6 +133,33 @@ let map=new mapboxgl.Map({
  zoom:12
 });
 
+ let markers = {
+  origen: null,
+  destino: null,
+  parada: null
+};
+
+function setMarker(tipo, coord){
+
+  let color;
+
+  if(tipo === "origen") color = "#00e5ff";   // azul
+  if(tipo === "destino") color = "#ff3b3b"; // rojo
+  if(tipo === "parada") color = "#ffa500";  // naranja
+
+  // eliminar marcador anterior
+  if(markers[tipo]){
+    markers[tipo].remove();
+  }
+
+  // crear nuevo marcador
+  markers[tipo] = new mapboxgl.Marker({ color })
+    .setLngLat(coord)
+    .addTo(map);
+
+  map.flyTo({ center: coord, zoom: 14 });
+}
+
 let origenCoord,destinoCoord,paradaCoord;
 
 /* NAV */
@@ -188,9 +215,20 @@ function geo(id,cb){
  g.on('result',e=>cb(e.result.center));
 }
 
-geo("origenBox",c=>origenCoord=c);
-geo("destinoBox",c=>destinoCoord=c);
-geo("paradaBox",c=>paradaCoord=c);
+geo("origenBox",c=>{
+  origenCoord = c;
+  setMarker("origen", c);
+});
+
+geo("destinoBox",c=>{
+  destinoCoord = c;
+  setMarker("destino", c);
+});
+
+geo("paradaBox",c=>{
+  paradaCoord = c;
+  setMarker("parada", c);
+});
 
 /* GPS */
 async function usarUbicacion(){
@@ -202,9 +240,7 @@ async function usarUbicacion(){
   map.flyTo({ center: origenCoord, zoom: 15 });
 
   // marcador
-  new mapboxgl.Marker({ color:"#00e5ff" })
-    .setLngLat(origenCoord)
-    .addTo(map);
+  setMarker("origen", origenCoord);
 
   // convertir a dirección (reverse geocoding)
   let res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${origenCoord[0]},${origenCoord[1]}.json?access_token=${mapboxgl.accessToken}`);
