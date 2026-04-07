@@ -193,10 +193,31 @@ geo("destinoBox",c=>destinoCoord=c);
 geo("paradaBox",c=>paradaCoord=c);
 
 /* GPS */
-function usarUbicacion(){
- navigator.geolocation.getCurrentPosition(pos=>{
-  origenCoord=[pos.coords.longitude,pos.coords.latitude];
- });
+async function usarUbicacion(){
+ navigator.geolocation.getCurrentPosition(async pos=>{
+  
+  origenCoord = [pos.coords.longitude, pos.coords.latitude];
+
+  // mover mapa
+  map.flyTo({ center: origenCoord, zoom: 15 });
+
+  // marcador
+  new mapboxgl.Marker({ color:"#00e5ff" })
+    .setLngLat(origenCoord)
+    .addTo(map);
+
+  // convertir a dirección (reverse geocoding)
+  let res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${origenCoord[0]},${origenCoord[1]}.json?access_token=${mapboxgl.accessToken}`);
+  let data = await res.json();
+
+  let direccion = data.features[0].place_name;
+
+  // 🔥 meter texto en input
+  document.querySelector('#origenBox input').value = direccion;
+
+ }, err=>{
+  alert("Activa ubicación GPS");
+ }, { enableHighAccuracy:true });
 }
 
 /* FECHA */
