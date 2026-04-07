@@ -270,7 +270,9 @@ async function enviarReserva(km,min,precio){
    origen:document.querySelector('#origenBox input').value,
    destino:document.querySelector('#destinoBox input').value,
    parada:document.querySelector('#paradaBox input')?.value||"",
-   km,tiempo:min,precio,telefono:tel
+   km,tiempo:min,precio,
+   fechaReserva: document.getElementById("fechaHora").value,
+   telefono:tel
   })
  });
 }
