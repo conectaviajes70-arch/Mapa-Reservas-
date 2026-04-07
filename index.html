@@ -244,13 +244,13 @@ async function cotizar(){
  let data=await res.json();
 
  let r=data.routes[0];
- let km=r.distance/1000;
- let min=r.duration/60;
+ let km = parseFloat((r.distance/1000).toFixed(2));
+let min = Math.round(r.duration/60);
 
- let precio=20+(km*7)+(min*1.5);
+ let precio = Math.round(20 + (km * 7) + (min * 1.5));
 
- precio=Math.min(precio,800);
- precio=Math.max(precio,60);
+ precio=Math.min(precio,28000);
+ precio=Math.max(precio,48);
 
  document.getElementById('km').innerText=km.toFixed(2);
  document.getElementById('time').innerText=min.toFixed(0);
